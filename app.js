@@ -27,6 +27,13 @@ function getBadgeText(item) {
   return item.type ? item.type.toUpperCase() : "MEDIA";
 }
 
+function destroyHls() {
+  if (currentHls) {
+    currentHls.destroy();
+    currentHls = null;
+  }
+}
+
 function renderGallery(items) {
   gallery.innerHTML = "";
 
@@ -70,37 +77,22 @@ function applyFilter(filter) {
   renderGallery(filtered);
 }
 
-fetch("data.json")
-  .then(res => res.json())
-  .then(data => {
-    allItems = data;
-    renderGallery(allItems);
-  })
-  .catch(err => {
-    console.error("Gagal load data.json:", err);
-    gallery.innerHTML = `<p>Gagal memuat data gallery.</p>`;
-  });
-
-filterButtons.forEach(btn => {
-  btn.addEventListener("click", () => {
-    filterButtons.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    const filter = btn.dataset.filter;
-    applyFilter(filter);
-  });
-});
-
 function openPlayer(item) {
   modal.classList.remove("hidden");
-
-  if (currentHls) {
-    currentHls.destroy();
-    currentHls = null;
-  }
-
+  destroyHls();
   player.innerHTML = "";
 
+  // support format baru: multi source
+  if (item.sources && Array.isArray(item.sources) && item.sources.length > 0) {
+    renderMultiSource(item);
+    return;
+  }
+
+  // support format lama
+  renderSingle(item);
+}
+
+function renderSingle(item) {
   if (item.type === "mp4") {
     player.innerHTML = `
       <div class="video-wrapper">
@@ -149,13 +141,108 @@ function openPlayer(item) {
   }
 }
 
+function renderMultiSource(item) {
+  player.innerHTML = `
+    <div class="source-switcher" id="sourceButtons"></div>
+    <div id="videoContainer"></div>
+  `;
+
+  const btnContainer = document.getElementById("sourceButtons");
+  const container = document.getElementById("videoContainer");
+
+  item.sources.forEach((source, index) => {
+    const btn = document.createElement("button");
+    btn.className = "source-btn";
+    btn.textContent = source.label || `Source ${index + 1}`;
+
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".source-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      loadSource(source, container, item.title);
+    });
+
+    btnContainer.appendChild(btn);
+
+    if (index === 0) {
+      btn.classList.add("active");
+      loadSource(source, container, item.title);
+    }
+  });
+}
+
+function loadSource(source, container, title = "") {
+  destroyHls();
+  container.innerHTML = "";
+
+  if (source.type === "mp4") {
+    container.innerHTML = `
+      <div class="video-wrapper">
+        <video controls autoplay playsinline>
+          <source src="${source.src}" type="video/mp4">
+        </video>
+      </div>
+    `;
+  } else if (source.type === "iframe") {
+    container.innerHTML = `
+      <div class="iframe-wrapper">
+        <iframe
+          src="${source.src}"
+          allowfullscreen
+          loading="lazy"
+          referrerpolicy="strict-origin-when-cross-origin">
+        </iframe>
+      </div>
+    `;
+  } else if (source.type === "m3u8") {
+    container.innerHTML = `
+      <div class="video-wrapper">
+        <video id="hlsPlayer" controls autoplay playsinline></video>
+      </div>
+    `;
+
+    const video = document.getElementById("hlsPlayer");
+
+    if (window.Hls && Hls.isSupported()) {
+      currentHls = new Hls();
+      currentHls.loadSource(source.src);
+      currentHls.attachMedia(video);
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = source.src;
+    } else {
+      container.innerHTML = `<p>Browser tidak mendukung HLS.</p>`;
+    }
+  } else if (source.type === "image") {
+    container.innerHTML = `
+      <div class="image-wrapper">
+        <img src="${source.src}" alt="${title}">
+      </div>
+    `;
+  } else {
+    container.innerHTML = `<p>Source tidak dikenali.</p>`;
+  }
+}
+
 function closePlayer() {
   modal.classList.add("hidden");
-
-  if (currentHls) {
-    currentHls.destroy();
-    currentHls = null;
-  }
-
+  destroyHls();
   player.innerHTML = "";
 }
+
+fetch("data.json")
+  .then(res => res.json())
+  .then(data => {
+    allItems = data;
+    renderGallery(allItems);
+  })
+  .catch(err => {
+    console.error("Gagal load data.json:", err);
+    gallery.innerHTML = `<p>Gagal memuat data gallery.</p>`;
+  });
+
+filterButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    filterButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    applyFilter(btn.dataset.filter);
+  });
+});
