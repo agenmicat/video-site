@@ -1,10 +1,13 @@
 const gallery = document.getElementById("gallery");
 const modal = document.getElementById("playerModal");
 const player = document.getElementById("player");
-const filterButtons = document.querySelectorAll(".filter-btn");
+const typeFilters = document.getElementById("typeFilters");
+const categoryFilters = document.getElementById("categoryFilters");
 
 let currentHls = null;
 let allItems = [];
+let currentTypeFilter = "all";
+let currentCategoryFilter = "all";
 
 function formatDuration(seconds) {
   if (!seconds || isNaN(seconds)) return "";
@@ -51,6 +54,10 @@ function renderGallery(items) {
         ? `<span class="card-duration">${formatDuration(item.duration)}</span>`
         : "";
 
+    const categoryText = item.category
+      ? `<span class="card-category">${item.category}</span>`
+      : "";
+
     div.innerHTML = `
       <div class="thumb-wrap">
         <img src="${item.thumb}" alt="${item.title}">
@@ -59,6 +66,7 @@ function renderGallery(items) {
       </div>
       <div class="card-body">
         <p class="card-title">${item.title}</p>
+        ${categoryText}
       </div>
     `;
 
@@ -67,13 +75,90 @@ function renderGallery(items) {
   });
 }
 
-function applyFilter(filter) {
-  if (filter === "all") {
-    renderGallery(allItems);
-    return;
+function buildTypeFilters() {
+  const types = [
+    { label: "All", value: "all" },
+    { label: "Video", value: "video" },
+    { label: "Stream", value: "stream" },
+    { label: "Image", value: "image" }
+  ];
+
+  typeFilters.innerHTML = "";
+
+  types.forEach(type => {
+    const btn = document.createElement("button");
+    btn.className = `filter-btn ${currentTypeFilter === type.value ? "active" : ""}`;
+    btn.textContent = type.label;
+    btn.dataset.filter = type.value;
+
+    btn.addEventListener("click", () => {
+      currentTypeFilter = type.value;
+      buildTypeFilters();
+      applyFilters();
+    });
+
+    typeFilters.appendChild(btn);
+  });
+}
+
+function buildCategoryFilters(items) {
+  const categoriesMap = new Map();
+
+  items.forEach(item => {
+    const slug = item.categorySlug || "uncategorized";
+    const label = item.category || "Uncategorized";
+
+    if (!categoriesMap.has(slug)) {
+      categoriesMap.set(slug, label);
+    }
+  });
+
+  categoryFilters.innerHTML = "";
+
+  const allBtn = document.createElement("button");
+  allBtn.className = `filter-btn ${currentCategoryFilter === "all" ? "active" : ""}`;
+  allBtn.textContent = "All Categories";
+  allBtn.dataset.filter = "all";
+
+  allBtn.addEventListener("click", () => {
+    currentCategoryFilter = "all";
+    buildCategoryFilters(allItems);
+    applyFilters();
+  });
+
+  categoryFilters.appendChild(allBtn);
+
+  Array.from(categoriesMap.entries())
+    .sort((a, b) => a[1].localeCompare(b[1]))
+    .forEach(([slug, label]) => {
+      const btn = document.createElement("button");
+      btn.className = `filter-btn ${currentCategoryFilter === slug ? "active" : ""}`;
+      btn.textContent = label;
+      btn.dataset.filter = slug;
+
+      btn.addEventListener("click", () => {
+        currentCategoryFilter = slug;
+        buildCategoryFilters(allItems);
+        applyFilters();
+      });
+
+      categoryFilters.appendChild(btn);
+    });
+}
+
+function applyFilters() {
+  let filtered = [...allItems];
+
+  if (currentTypeFilter !== "all") {
+    filtered = filtered.filter(item => item.kind === currentTypeFilter);
   }
 
-  const filtered = allItems.filter(item => item.kind === filter);
+  if (currentCategoryFilter !== "all") {
+    filtered = filtered.filter(
+      item => (item.categorySlug || "uncategorized") === currentCategoryFilter
+    );
+  }
+
   renderGallery(filtered);
 }
 
@@ -82,13 +167,11 @@ function openPlayer(item) {
   destroyHls();
   player.innerHTML = "";
 
-  // support format baru: multi source
   if (item.sources && Array.isArray(item.sources) && item.sources.length > 0) {
     renderMultiSource(item);
     return;
   }
 
-  // support format lama
   renderSingle(item);
 }
 
@@ -232,17 +315,11 @@ fetch("data.json")
   .then(res => res.json())
   .then(data => {
     allItems = data;
-    renderGallery(allItems);
+    buildTypeFilters();
+    buildCategoryFilters(allItems);
+    applyFilters();
   })
   .catch(err => {
     console.error("Gagal load data.json:", err);
     gallery.innerHTML = `<p>Gagal memuat data gallery.</p>`;
   });
-
-filterButtons.forEach(btn => {
-  btn.addEventListener("click", () => {
-    filterButtons.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    applyFilter(btn.dataset.filter);
-  });
-});

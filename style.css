@@ -207,3 +207,14 @@ h1 {
   color: #111;
   border-color: #fff;
 }
+.card-category {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+#typeFilters,
+#categoryFilters {
+  margin-bottom: 14px;
+}
