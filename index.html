@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Video Gallery</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>My Video Gallery</h1>
+
+<div id="filters" class="filters">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="video">Video</button>
+  <button class="filter-btn" data-filter="stream">Stream</button>
+  <button class="filter-btn" data-filter="image">Image</button>
+</div>
+
+<div id="gallery"></div>
+
+<div id="playerModal" class="hidden">
+  <div class="player-content">
+    <span class="player-close" onclick="closePlayer()">×</span>
+    <div id="player"></div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="app.js"></script>
+</body>
+</html>
