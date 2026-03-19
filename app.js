@@ -65,7 +65,7 @@ function renderGallery(items) {
         ${durationText}
       </div>
       <div class="card-body">
-        <p class="card-title">${item.title}</p>
+        <p class="card-title" title="${item.title}">${item.title}</p>
         ${categoryText}
       </div>
     `;

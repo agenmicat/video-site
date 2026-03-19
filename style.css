@@ -218,3 +218,16 @@ h1 {
 #categoryFilters {
   margin-bottom: 14px;
 }
+.card-body {
+  padding: 10px;
+  min-height: 44px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
