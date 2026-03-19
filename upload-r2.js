@@ -1,7 +1,11 @@
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  HeadObjectCommand
+} from "@aws-sdk/client-s3";
 
 const mediaDir = "./media";
 
@@ -41,10 +45,42 @@ function getContentType(fileName) {
   return "application/octet-stream";
 }
 
+async function objectExists(key) {
+  try {
+    await client.send(
+      new HeadObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: key
+      })
+    );
+    return true;
+  } catch (err) {
+    const code = err?.name || err?.Code || err?.code;
+    const status = err?.$metadata?.httpStatusCode;
+
+    if (
+      code === "NotFound" ||
+      code === "NoSuchKey" ||
+      status === 404
+    ) {
+      return false;
+    }
+
+    throw err;
+  }
+}
+
 async function uploadFile(fileName) {
   const fullPath = path.join(mediaDir, fileName);
 
   if (!fs.statSync(fullPath).isFile()) return;
+
+  const exists = await objectExists(fileName);
+
+  if (exists) {
+    console.log(`Skip (exists): ${fileName}`);
+    return;
+  }
 
   const body = fs.readFileSync(fullPath);
 
