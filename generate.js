@@ -1,6 +1,9 @@
+import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
+
+const publicBase = process.env.R2_PUBLIC_BASE_URL || "";
 
 const mediaDir = "./media";
 const output = "./data.json";
@@ -30,6 +33,10 @@ function getVideoDuration(filePath) {
   }
 }
 
+function makeMediaUrl(fileName) {
+  return publicBase ? `${publicBase}/${fileName}` : `media/${fileName}`;
+}
+
 files.forEach(file => {
   const ext = path.extname(file).toLowerCase();
   const name = path.basename(file, ext);
@@ -37,25 +44,23 @@ files.forEach(file => {
 
   // VIDEO MP4
   if (ext === ".mp4") {
-    const thumb =
-      files.find(f => {
-        const thumbExt = path.extname(f).toLowerCase();
-        const thumbName = path.basename(f, thumbExt);
-        return (
-          thumbName === name &&
-          [".jpg", ".jpeg", ".png", ".webp"].includes(thumbExt)
-        );
-      }) ||
-      "https://dummyimage.com/300x200/000/fff&text=No+Thumb";
+    const thumb = files.find(f => {
+      const thumbExt = path.extname(f).toLowerCase();
+      const thumbName = path.basename(f, thumbExt);
+      return (
+        thumbName === name &&
+        [".jpg", ".jpeg", ".png", ".webp"].includes(thumbExt)
+      );
+    });
 
     data.push({
       title: name,
       type: "mp4",
       kind: "video",
-      src: `media/${file}`,
-      thumb: typeof thumb === "string" && thumb.startsWith("http")
-        ? thumb
-        : `media/${thumb}`,
+      src: makeMediaUrl(file),
+      thumb: thumb
+        ? makeMediaUrl(thumb)
+        : "https://dummyimage.com/300x200/000/fff&text=No+Thumb",
       duration: getVideoDuration(fullPath),
       size: getFileSize(fullPath)
     });
@@ -76,9 +81,9 @@ files.forEach(file => {
       title: name,
       type: "m3u8",
       kind: "stream",
-      src: `media/${file}`,
+      src: makeMediaUrl(file),
       thumb: thumb
-        ? `media/${thumb}`
+        ? makeMediaUrl(thumb)
         : "https://dummyimage.com/300x200/000/fff&text=Stream",
       size: getFileSize(fullPath)
     });
@@ -97,8 +102,8 @@ files.forEach(file => {
         title: name,
         type: "image",
         kind: "image",
-        src: `media/${file}`,
-        thumb: `media/${file}`,
+        src: makeMediaUrl(file),
+        thumb: makeMediaUrl(file),
         size: getFileSize(fullPath)
       });
     }
