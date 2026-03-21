@@ -45,6 +45,46 @@ function getVideoDuration(filePath) {
   }
 }
 
+function getVideoDimensions(filePath) {
+  try {
+    const result = execSync(
+      `ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "${filePath}"`
+    )
+      .toString()
+      .trim();
+
+    const [width, height] = result.split("x").map(Number);
+
+    if (!width || !height) {
+      return {
+        width: null,
+        height: null,
+        orientation: "unknown"
+      };
+    }
+
+    let orientation = "square";
+
+    if (height > width) {
+      orientation = "portrait";
+    } else if (width > height) {
+      orientation = "landscape";
+    }
+
+    return {
+      width,
+      height,
+      orientation
+    };
+  } catch {
+    return {
+      width: null,
+      height: null,
+      orientation: "unknown"
+    };
+  }
+}
+
 function parseFileMeta(fileName) {
   const ext = path.extname(fileName);
   const base = path.basename(fileName, ext);
@@ -99,6 +139,7 @@ files.forEach(file => {
   // MP4 VIDEO
   if (ext === ".mp4") {
     const thumb = findMatchingThumb(name);
+    const videoMeta = getVideoDimensions(fullPath);
 
     data.push({
       title: meta.title,
@@ -113,7 +154,10 @@ files.forEach(file => {
         ? makeMediaUrl(thumb)
         : "https://dummyimage.com/300x200/000/fff&text=No+Thumb",
       duration: getVideoDuration(fullPath),
-      size: getFileSize(fullPath)
+      size: getFileSize(fullPath),
+      width: videoMeta.width,
+      height: videoMeta.height,
+      orientation: videoMeta.orientation
     });
   }
 
@@ -133,7 +177,10 @@ files.forEach(file => {
       thumb: thumb
         ? makeMediaUrl(thumb)
         : "https://dummyimage.com/300x200/000/fff&text=Stream",
-      size: getFileSize(fullPath)
+      size: getFileSize(fullPath),
+      width: null,
+      height: null,
+      orientation: "unknown"
     });
   }
 
@@ -157,14 +204,21 @@ files.forEach(file => {
         kind: "image",
         src: makeMediaUrl(file),
         thumb: makeMediaUrl(file),
-        size: getFileSize(fullPath)
+        size: getFileSize(fullPath),
+        width: null,
+        height: null,
+        orientation: "unknown"
       });
     }
   }
 });
 
-// optional: sort by title biar stabil
-data.sort((a, b) => a.title.localeCompare(b.title));
+// sort stabil: category lalu title
+data.sort((a, b) => {
+  const catCompare = (a.category || "").localeCompare(b.category || "");
+  if (catCompare !== 0) return catCompare;
+  return (a.title || "").localeCompare(b.title || "");
+});
 
 fs.writeFileSync(output, JSON.stringify(data, null, 2));
-console.log("data.json generated with full metadata!");
+console.log("data.json generated with full metadata v2!");

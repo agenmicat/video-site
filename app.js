@@ -30,11 +30,27 @@ function getBadgeText(item) {
   return item.type ? item.type.toUpperCase() : "MEDIA";
 }
 
+function getOrientationBadge(item) {
+  if (!item.orientation || item.orientation === "unknown") return "";
+  if (item.orientation === "portrait") return "PORTRAIT";
+  if (item.orientation === "landscape") return "LANDSCAPE";
+  if (item.orientation === "square") return "SQUARE";
+  return item.orientation.toUpperCase();
+}
+
 function destroyHls() {
   if (currentHls) {
     currentHls.destroy();
     currentHls = null;
   }
+}
+
+function escapeHtml(text) {
+  return String(text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function renderGallery(items) {
@@ -55,22 +71,29 @@ function renderGallery(items) {
         : "";
 
     const categoryText = item.category
-      ? `<span class="card-category">${item.category}</span>`
+      ? `<span class="card-category">${escapeHtml(item.category)}</span>`
+      : "";
+
+    const orientationText = getOrientationBadge(item)
+      ? `<span class="card-orientation">${getOrientationBadge(item)}</span>`
       : "";
 
     div.innerHTML = `
       <div class="thumb-wrap">
-        <img src="${item.thumb}" alt="${item.title}">
+        <img src="${item.thumb}" alt="${escapeHtml(item.title)}" loading="lazy">
         <span class="card-badge">${getBadgeText(item)}</span>
         ${durationText}
       </div>
       <div class="card-body">
-        <p class="card-title" title="${item.title}">${item.title}</p>
-        ${categoryText}
+        <p class="card-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</p>
+        <div class="card-meta">
+          ${categoryText}
+          ${orientationText}
+        </div>
       </div>
     `;
 
-    div.onclick = () => openPlayer(item);
+    div.addEventListener("click", () => openPlayer(item));
     gallery.appendChild(div);
   });
 }
@@ -179,7 +202,7 @@ function renderSingle(item) {
   if (item.type === "mp4") {
     player.innerHTML = `
       <div class="video-wrapper">
-        <video controls autoplay playsinline>
+        <video controls autoplay playsinline preload="metadata">
           <source src="${item.src}" type="video/mp4">
         </video>
       </div>
@@ -187,7 +210,7 @@ function renderSingle(item) {
   } else if (item.type === "image") {
     player.innerHTML = `
       <div class="image-wrapper">
-        <img src="${item.src}" alt="${item.title}">
+        <img src="${item.src}" alt="${escapeHtml(item.title)}">
       </div>
     `;
   } else if (item.type === "iframe") {
@@ -204,7 +227,7 @@ function renderSingle(item) {
   } else if (item.type === "m3u8") {
     player.innerHTML = `
       <div class="video-wrapper">
-        <video id="hlsPlayer" controls autoplay playsinline></video>
+        <video id="hlsPlayer" controls autoplay playsinline preload="metadata"></video>
       </div>
     `;
 
@@ -260,7 +283,7 @@ function loadSource(source, container, title = "") {
   if (source.type === "mp4") {
     container.innerHTML = `
       <div class="video-wrapper">
-        <video controls autoplay playsinline>
+        <video controls autoplay playsinline preload="metadata">
           <source src="${source.src}" type="video/mp4">
         </video>
       </div>
@@ -279,7 +302,7 @@ function loadSource(source, container, title = "") {
   } else if (source.type === "m3u8") {
     container.innerHTML = `
       <div class="video-wrapper">
-        <video id="hlsPlayer" controls autoplay playsinline></video>
+        <video id="hlsPlayer" controls autoplay playsinline preload="metadata"></video>
       </div>
     `;
 
@@ -297,7 +320,7 @@ function loadSource(source, container, title = "") {
   } else if (source.type === "image") {
     container.innerHTML = `
       <div class="image-wrapper">
-        <img src="${source.src}" alt="${title}">
+        <img src="${source.src}" alt="${escapeHtml(title)}">
       </div>
     `;
   } else {
@@ -310,6 +333,18 @@ function closePlayer() {
   destroyHls();
   player.innerHTML = "";
 }
+
+modal.addEventListener("click", event => {
+  if (event.target === modal) {
+    closePlayer();
+  }
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+    closePlayer();
+  }
+});
 
 fetch("data.json")
   .then(res => res.json())
