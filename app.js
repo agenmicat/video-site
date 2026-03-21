@@ -26,6 +26,7 @@ let currentHls = null;
 let allItems = [];
 let currentTypeFilter = "all";
 let currentCategoryFilter = "all";
+const resultInfo = document.getElementById("resultInfo");
 
 const sortSelect = document.getElementById("sortSelect");
 let currentSort = "newest";
@@ -94,6 +95,10 @@ function escapeHtml(text) {
 
 function renderGallery(items) {
   gallery.innerHTML = "";
+
+  if (resultInfo) {
+  resultInfo.textContent = `${items.length} item found`;
+}
 
   if (!items.length) {
     gallery.innerHTML = `<p>Tidak ada item untuk filter ini.</p>`;
@@ -387,7 +392,7 @@ document.addEventListener("keydown", event => {
   }
 });
 
-fetch("data.json")
+fetch("data.json?v=" + Date.now())
   .then(res => res.json())
   .then(data => {
     allItems = data;

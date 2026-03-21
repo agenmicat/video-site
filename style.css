@@ -299,3 +299,8 @@ h1 {
 .search-bar input::placeholder {
   color: #777;
 }
+.result-info {
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: #aaa;
+}
