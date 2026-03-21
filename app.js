@@ -3,7 +3,25 @@ const modal = document.getElementById("playerModal");
 const player = document.getElementById("player");
 const typeFilters = document.getElementById("typeFilters");
 const categoryFilters = document.getElementById("categoryFilters");
+const searchInput = document.getElementById("searchInput");
+let currentSearch = "";
+function applySearch(items) {
+  if (!currentSearch) return items;
 
+  const q = currentSearch.toLowerCase();
+
+  return items.filter(item => {
+    const title = (item.title || "").toLowerCase();
+    const category = (item.category || "").toLowerCase();
+    const tags = (item.tags || []).join(" ").toLowerCase();
+
+    return (
+      title.includes(q) ||
+      category.includes(q) ||
+      tags.includes(q)
+    );
+  });
+}
 let currentHls = null;
 let allItems = [];
 let currentTypeFilter = "all";
@@ -192,6 +210,7 @@ function buildCategoryFilters(items) {
 
 function applyFilters() {
   let filtered = [...allItems];
+  filtered = applySearch(filtered);
 
   if (currentTypeFilter !== "all") {
     filtered = filtered.filter(item => item.kind === currentTypeFilter);
@@ -384,3 +403,9 @@ fetch("data.json")
   currentSort = sortSelect.value;
   applyFilters();
 });
+if (searchInput) {
+  searchInput.addEventListener("input", e => {
+    currentSearch = e.target.value.trim();
+    applyFilters();
+  });
+}
