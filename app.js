@@ -9,6 +9,27 @@ let allItems = [];
 let currentTypeFilter = "all";
 let currentCategoryFilter = "all";
 
+const sortSelect = document.getElementById("sortSelect");
+let currentSort = "newest";
+function sortItems(items) {
+  const sorted = [...items];
+
+  if (currentSort === "title") {
+    sorted.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+  }
+
+  if (currentSort === "duration") {
+    sorted.sort((a, b) => (b.duration || 0) - (a.duration || 0));
+  }
+
+  if (currentSort === "newest") {
+    // fallback sementara pakai order asli (bisa kita upgrade nanti)
+    return sorted.reverse();
+  }
+
+  return sorted;
+}
+
 function formatDuration(seconds) {
   if (!seconds || isNaN(seconds)) return "";
 
@@ -182,7 +203,8 @@ function applyFilters() {
     );
   }
 
-  renderGallery(filtered);
+  const sorted = sortItems(filtered);
+  renderGallery(sorted);
 }
 
 function openPlayer(item) {
@@ -358,3 +380,7 @@ fetch("data.json")
     console.error("Gagal load data.json:", err);
     gallery.innerHTML = `<p>Gagal memuat data gallery.</p>`;
   });
+  sortSelect.addEventListener("change", () => {
+  currentSort = sortSelect.value;
+  applyFilters();
+});

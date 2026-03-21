@@ -271,3 +271,14 @@ h1 {
 #categoryFilters {
   margin-bottom: 14px;
 }
+.sort-bar {
+  margin-bottom: 14px;
+}
+
+.sort-bar select {
+  background: #1b1b1b;
+  color: #fff;
+  border: 1px solid #333;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
